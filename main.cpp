@@ -6,6 +6,7 @@
 #include <iostream>
 #include <math.h>
 #include "Shader.hpp"
+#include "glm/ext/matrix_transform.hpp"
 #include "glm/trigonometric.hpp"
 #include "renderer.hpp"
 #include <glm/glm.hpp>
@@ -23,6 +24,14 @@ const unsigned int SCR_HEIGHT = 600;
 
 int success;
 char infolog[512];
+
+glm::vec3 cameraPos =glm::vec3(0.0f,0.0f,3.0f);
+glm::vec3 cameraFront =glm::vec3(0.0f,0.0f,-1.0f);
+glm::vec3 cameraUp =glm::vec3(0.0f,1.0f,0.0f);
+
+
+float deltaTime =0.0f;
+float lastFrame =0.0f;
 int main() {
   // glfw: initialize and configure
   // ---------------------------------
@@ -55,18 +64,63 @@ int main() {
   }//texture code///////
 
 
-  
+  glEnable(GL_DEPTH_TEST);
 ///////texturecode/////
 Shader myshader("../shader/vertex.shader","../shader/fragment.shader");
 
 float vertices[] = {
-    // positions          // colors           // texture coords
-     0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // top right
-     0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // bottom right
-    -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // bottom left
-    -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // top left 
+    // positions         // texture coords
+     0.5f,  0.5f, 0.0f,  1.0f, 1.0f,   // top right
+     0.5f, -0.5f, 0.0f,  1.0f, 0.0f,   // bottom right
+    -0.5f, -0.5f, 0.0f,  0.0f, 0.0f,   // bottom left
+    -0.5f,  0.5f, 0.0f,  0.0f, 1.0f    // top left
 };
- unsigned int indices[]={0,1,3,1,2,3};
+
+float vertices1[] = {
+    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+     0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+    -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+    -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+};
+
+ //unsigned int indices[]={0,1,3,1,2,3};
 
   unsigned int VAO,VBO,EBO;
   glGenVertexArrays(1,&VAO);
@@ -74,32 +128,27 @@ float vertices[] = {
   glGenBuffers(1,&EBO);
 
   glBindVertexArray(VAO);
-  
+
   glBindBuffer(GL_ARRAY_BUFFER,VBO);
-  glBufferData(GL_ARRAY_BUFFER,sizeof(vertices),vertices,GL_STATIC_DRAW);
-  
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,EBO);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER,sizeof(indices),indices,GL_STATIC_DRAW);
-  
-  glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,8*sizeof(float),(void*)0);
+  glBufferData(GL_ARRAY_BUFFER,sizeof(vertices1),vertices1,GL_STATIC_DRAW);
+
+ // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,EBO);
+ // glBufferData(GL_ELEMENT_ARRAY_BUFFER,sizeof(indices),indices,GL_STATIC_DRAW);
+
+  glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,5*sizeof(float),(void*)0);
   glEnableVertexAttribArray(0);
-  
-  glVertexAttribPointer(1,3,GL_FLOAT,GL_FALSE,8*sizeof(float),(void*)(3*sizeof(float)));
+
+  glVertexAttribPointer(1,2,GL_FLOAT,GL_FALSE,5*sizeof(float),(void*)(3*sizeof(float)));
   glEnableVertexAttribArray(1);
-  
-  glVertexAttribPointer(2,2,GL_FLOAT,GL_FALSE,8*sizeof(float),(void*)(6*sizeof(float)));
-  glEnableVertexAttribArray(2);
+
   glBindVertexArray(0);
   //////////
-
-
-
 
   unsigned int texture1,texture2;
   GLCall(glGenTextures(1,&texture1));
    GLCall(glBindTexture(GL_TEXTURE_2D,texture1));
-  
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -111,7 +160,7 @@ unsigned char* data1=stbi_load("../Cute_dog.jpg",&width1,&height1,&nrChannels1,0
 if(data1)
 {
      GLCall(glTexImage2D(GL_TEXTURE_2D,0,GL_RGB,width1,height1,0,GL_RGB,GL_UNSIGNED_BYTE,data1));
-     GLCall(glGenerateMipmap(GL_TEXTURE_2D));  
+     GLCall(glGenerateMipmap(GL_TEXTURE_2D));
 }
 else {
 {
@@ -123,20 +172,20 @@ else {
 
    GLCall(glGenTextures(1,&texture2));
    GLCall(glBindTexture(GL_TEXTURE_2D,texture2));
-  
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-  
+
   int width ,height,nrChannels;
   unsigned char* data = stbi_load("../download.jpg",&width,&height,&nrChannels,0);
 
   if(data)
   {
       GLCall( glTexImage2D(GL_TEXTURE_2D,0,GL_RGB,width,height,0,GL_RGB,GL_UNSIGNED_BYTE,data));
-      GLCall( glGenerateMipmap(GL_TEXTURE_2D));  
+      GLCall( glGenerateMipmap(GL_TEXTURE_2D));
 
   }
   else{
@@ -148,19 +197,39 @@ else {
     GLCall(myshader.setInt("texture2", 2));
     //glmmms
 
-    glm::vec4 vec(1.0f,0.0f,0.0f,1.0f);
-   
-   
-    glm::ortho(0.0f, 800.0f, 0.0f, 600.0f, 0.1f, 100.0f);
 
 
+ ///uniforms prcatise
+glm::vec3 cubePositions[]={
+    glm::vec3( 0.0f,  0.0f,  0.0f), 
+      glm::vec3( 2.0f,  5.0f, -15.0f), 
+      glm::vec3(-1.5f, -2.2f, -2.5f),  
+      glm::vec3(-3.8f, -2.0f, -12.3f),  
+      glm::vec3( 2.4f, -0.4f, -3.5f),  
+      glm::vec3(-1.7f,  3.0f, -7.5f),  
+      glm::vec3( 1.3f, -2.0f, -2.5f),  
+      glm::vec3( 1.5f,  2.0f, -2.5f), 
+      glm::vec3( 1.5f,  0.2f, -1.5f), 
+      glm::vec3(-1.3f,  1.0f, -1.5f)  
     
- ///uniforms prcatise 
+};
 
+
+   glm::mat4 projection=glm::mat4(1.0f);
+   projection=glm::perspective(glm::radians(45.0f),(float)SCR_WIDTH/(float)SCR_HEIGHT,0.1f,100.0f);
+
+   unsigned int projectionLoc=  glGetUniformLocation(myshader.ID,"projection");
+glUniformMatrix4fv(projectionLoc,1,GL_FALSE,glm::value_ptr(projection));
   // render loop
   // -----------
   //
   while (!glfwWindowShouldClose(window)) {
+
+
+
+      float currentFrame = static_cast<float>(glfwGetTime());
+      deltaTime = currentFrame-lastFrame;
+      lastFrame=currentFrame;
     // input
     // -----
     processInput(window);
@@ -169,39 +238,40 @@ else {
     // ------
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-   
+
 
            GLCall(glActiveTexture(GL_TEXTURE0));
            GLCall(glBindTexture(GL_TEXTURE_2D, texture1));
           GLCall( glActiveTexture(GL_TEXTURE2));
           GLCall( glBindTexture(GL_TEXTURE_2D, texture2));
 
-          
+
     GLCall(myshader.use());
      glBindVertexArray(VAO);
     float time =glfwGetTime();
     float a_val=(sin(time)/2)+0.5f;
    myshader.setFloat("a",a_val);
-    glm::mat4 trans =glm::mat4(1.0f);
-   trans=glm::rotate(trans,glm::radians(360.0f*a_val),glm::vec3(1.0f,1.0f,1.0f));
-   trans=glm::scale(trans,glm::vec3(a_val,a_val,1.0f));
 
-   GLCall(unsigned int transformloc=glGetUniformLocation(myshader.ID,"transform"));
-   GLCall(glUniformMatrix4fv(transformloc,1,GL_FALSE,glm::value_ptr(trans)));
-       myshader.setFloat("offset",0);
-    GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0));
- 
-    myshader.setFloat("offset",a_val);
-    GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0));
+   glm::mat4 view =glm::mat4(1.0f);
+  view = glm::lookAt(cameraPos,cameraFront+cameraPos,cameraUp);
 
-    myshader.setFloat("offset",-a_val);
-    GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0));
-   // glBindVertexArray(0);
-    //glUseProgram(ShaderProgram1);
-   // glBindBuffer(GL_ARRAY_BUFFER,VBO1);
-   // glBindVertexArray(VAO1);
-  //  glDrawArrays(GL_TRIANGLES, 0,3);
-    //glDrawElements(GL_TRIANGLES, 6,GL_UNSIGNED_INT,0);
+
+unsigned int viewLoc=glGetUniformLocation(myshader.ID,"view");
+
+glUniformMatrix4fv(viewLoc,1,GL_FALSE,glm::value_ptr(view));
+
+glBindVertexArray(VAO);
+
+for(unsigned int i=0;i<10;i++)
+{
+   glm::mat4 model =glm::mat4(1.0f);
+   model=glm::translate(model,cubePositions[i]);
+   model=glm::rotate(model,glm::radians(0.0f),glm::vec3(1.0f,0.3f,0.5f));
+   unsigned int modelLoc = glGetUniformLocation(myshader.ID,"model");
+   glUniformMatrix4fv(modelLoc,1,GL_FALSE,&model[0][0]);
+   glDrawArrays(GL_TRIANGLES,0,36);
+   
+};
      //glBindVertexArray(0);
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved
     // etc.)
@@ -214,6 +284,7 @@ else {
   // ------------------------------------------------------------------
   glDeleteVertexArrays(1,&VAO);
   glDeleteBuffers(1,&VBO);
+  glDeleteBuffers(1,&EBO);
 //  glDeleteProgram(ShaderProgram);
   glfwTerminate();
   return 0;
@@ -225,7 +296,18 @@ else {
 void processInput(GLFWwindow *window) {
   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
     glfwSetWindowShouldClose(window, true);
+  float cameraSpeed= static_cast<float>(2.5*deltaTime);
+  if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+       cameraPos += cameraSpeed * cameraFront;
+  std::cout<<cameraPos.z<<std::endl;
+   if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+       cameraPos -= cameraSpeed * cameraFront;
+   if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+       cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+   if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+       cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 }
+
 
 // glfw: whenever the window size changed (by OS or user resize) this callback
 // function executes
