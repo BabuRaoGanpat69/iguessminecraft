@@ -1,4 +1,4 @@
-
+ 
 #include "glad/glad.h"
 #include <GL/gl.h>
 #include <GL/glext.h>
@@ -6,6 +6,7 @@
 #include <iostream>
 #include <math.h>
 #include "Shader.hpp"
+#include "glm/ext/matrix_float4x4.hpp"
 #include "glm/ext/matrix_transform.hpp"
 #include "glm/trigonometric.hpp"
 #include "renderer.hpp"
@@ -41,6 +42,11 @@ float fov =45.0f;
 
 float deltaTime =0.0f;
 float lastFrame =0.0f;
+
+glm::vec3 objectColor(1.0f, 0.5f, 0.31f); 
+glm::vec3 lampColor(1.0f, 1.0f, 1.0f); 
+
+
 int main() {
   // glfw: initialize and configure
   // ---------------------------------
@@ -80,84 +86,87 @@ int main() {
 
   glEnable(GL_DEPTH_TEST);
 ///////texturecode/////
-Shader myshader("../shader/vertex.shader","../shader/fragment.shader");
+Shader mycubeshader("../shader/colors.vs","../shader/colors.fs");
+Shader lightingshader("../shader/light_cube.vs","../shader/light_cube.fs");
 
 float vertices[] = {
-    // positions         // texture coords
-     0.5f,  0.5f, 0.0f,  1.0f, 1.0f,   // top right
-     0.5f, -0.5f, 0.0f,  1.0f, 0.0f,   // bottom right
-    -0.5f, -0.5f, 0.0f,  0.0f, 0.0f,   // bottom left
-    -0.5f,  0.5f, 0.0f,  0.0f, 1.0f    // top left
-};
+        -0.5f, -0.5f, -0.5f, 
+         0.5f, -0.5f, -0.5f,  
+         0.5f,  0.5f, -0.5f,  
+         0.5f,  0.5f, -0.5f,  
+        -0.5f,  0.5f, -0.5f, 
+        -0.5f, -0.5f, -0.5f, 
 
-float vertices1[] = {
-    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-     0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f, 
+         0.5f, -0.5f,  0.5f,  
+         0.5f,  0.5f,  0.5f,  
+         0.5f,  0.5f,  0.5f,  
+        -0.5f,  0.5f,  0.5f, 
+        -0.5f, -0.5f,  0.5f, 
 
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f, 
+        -0.5f,  0.5f, -0.5f, 
+        -0.5f, -0.5f, -0.5f, 
+        -0.5f, -0.5f, -0.5f, 
+        -0.5f, -0.5f,  0.5f, 
+        -0.5f,  0.5f,  0.5f, 
 
-    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-    -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  
+         0.5f,  0.5f, -0.5f,  
+         0.5f, -0.5f, -0.5f,  
+         0.5f, -0.5f, -0.5f,  
+         0.5f, -0.5f,  0.5f,  
+         0.5f,  0.5f,  0.5f,  
 
-     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f, -0.5f, -0.5f, 
+         0.5f, -0.5f, -0.5f,  
+         0.5f, -0.5f,  0.5f,  
+         0.5f, -0.5f,  0.5f,  
+        -0.5f, -0.5f,  0.5f, 
+        -0.5f, -0.5f, -0.5f, 
 
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-
-    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
-};
-
+        -0.5f,  0.5f, -0.5f, 
+         0.5f,  0.5f, -0.5f,  
+         0.5f,  0.5f,  0.5f,  
+         0.5f,  0.5f,  0.5f,  
+        -0.5f,  0.5f,  0.5f, 
+        -0.5f,  0.5f, -0.5f, 
+    };
  //unsigned int indices[]={0,1,3,1,2,3};
 
-  unsigned int VAO,VBO,EBO;
-  glGenVertexArrays(1,&VAO);
-  glGenBuffers(1,&VBO);
-  glGenBuffers(1,&EBO);
+  unsigned int cubeVAO,cubeVBO,cubeEBO;
+  glGenVertexArrays(1,&cubeVAO);
+  glGenBuffers(1,&cubeVBO);
+  glGenBuffers(1,&cubeEBO);
 
-  glBindVertexArray(VAO);
+  glBindVertexArray(cubeVAO);
 
-  glBindBuffer(GL_ARRAY_BUFFER,VBO);
-  glBufferData(GL_ARRAY_BUFFER,sizeof(vertices1),vertices1,GL_STATIC_DRAW);
+  glBindBuffer(GL_ARRAY_BUFFER,cubeVBO);
+  glBufferData(GL_ARRAY_BUFFER,sizeof(vertices),vertices,GL_STATIC_DRAW);
 
  // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,EBO);
  // glBufferData(GL_ELEMENT_ARRAY_BUFFER,sizeof(indices),indices,GL_STATIC_DRAW);
 
-  glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,5*sizeof(float),(void*)0);
+  glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,3*sizeof(float),(void*)0);
   glEnableVertexAttribArray(0);
 
-  glVertexAttribPointer(1,2,GL_FLOAT,GL_FALSE,5*sizeof(float),(void*)(3*sizeof(float)));
-  glEnableVertexAttribArray(1);
+ // glVertexAttribPointer(1,2,GL_FLOAT,GL_FALSE,5*sizeof(float),(void*)(3*sizeof(float)));
+  //glEnableVertexAttribArray(1);
 
   glBindVertexArray(0);
   //////////
 
+unsigned int lampVAO,lampVBO;
+glGenVertexArrays(1,&lampVAO);
+glGenBuffers(1,&lampVBO);
+glBindVertexArray(lampVAO);
+glBindBuffer(GL_ARRAY_BUFFER,lampVBO);
+glBufferData(GL_ARRAY_BUFFER,sizeof(vertices),vertices,GL_STATIC_DRAW);
+glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,3*sizeof(float),(void*)0);
+glEnableVertexAttribArray(0);
+
+
+  
   unsigned int texture1,texture2;
   GLCall(glGenTextures(1,&texture1));
    GLCall(glBindTexture(GL_TEXTURE_2D,texture1));
@@ -206,9 +215,9 @@ else {
       std::cout<<"failed to load texture"<<std::endl;
   }
    stbi_image_free(data);
-    GLCall(myshader.use());
-    GLCall( glUniform1i(glGetUniformLocation(myshader.ID, "texture1"), 0));
-    GLCall(myshader.setInt("texture2", 2));
+   // GLCall(mycubeshader.use());
+   // GLCall( glUniform1i(glGetUniformLocation(mycubeshader.ID, "texture1"), 0));
+    //GLCall(mycubeshader.setInt("texture2", 2));
     //glmmms
 
 
@@ -229,11 +238,35 @@ glm::vec3 cubePositions[]={
 };
 
 
-   glm::mat4 projection=glm::mat4(1.0f);
-   projection=glm::perspective(glm::radians(100.0f),(float)SCR_WIDTH/(float)SCR_HEIGHT,0.1f,100.0f);
-std::cout<<fov<<std::endl;
-   unsigned int projectionLoc=  glGetUniformLocation(myshader.ID,"projection");
+glm::mat4 projection=glm::mat4(1.0f);
+
+glm::mat4 model =glm::mat4(1.0f); 
+projection=glm::perspective(glm::radians(100.0f),(float)SCR_WIDTH/(float)SCR_HEIGHT,0.1f,100.0f);
+
+mycubeshader.use();
+
+unsigned int color=glGetUniformLocation(mycubeshader.ID,"objectColor");
+unsigned int lampcolor=glGetUniformLocation(mycubeshader.ID,"lampColor");
+unsigned int projectionLoc=  glGetUniformLocation(mycubeshader.ID,"projection");
+unsigned int modelLoc=  glGetUniformLocation(mycubeshader.ID,"model");
+
+glUniform3fv(color,1,glm::value_ptr(objectColor));
+glUniform3fv(lampcolor,1,glm::value_ptr(lampColor));
 glUniformMatrix4fv(projectionLoc,1,GL_FALSE,glm::value_ptr(projection));
+glUniformMatrix4fv(modelLoc,1,GL_FALSE,glm::value_ptr(model));
+
+
+lightingshader.use();
+   unsigned int projectionLoc1=  glGetUniformLocation(lightingshader.ID,"projection");
+   unsigned int modelLoc1=  glGetUniformLocation(lightingshader.ID,"model");
+   unsigned int lampcolor1=glGetUniformLocation(lightingshader.ID,"lampColor");
+   
+ glm::mat4  model1 =glm::translate(model,cubePositions[1]);
+glUniformMatrix4fv(projectionLoc1,1,GL_FALSE,glm::value_ptr(projection));
+glUniformMatrix4fv(modelLoc1,1,GL_FALSE,glm::value_ptr(model1));
+glUniform3fv(lampcolor1,1,glm::value_ptr(lampColor));
+
+
   // render loop
   // -----------
   //
@@ -260,32 +293,26 @@ glUniformMatrix4fv(projectionLoc,1,GL_FALSE,glm::value_ptr(projection));
           GLCall( glBindTexture(GL_TEXTURE_2D, texture2));
 
 
-    GLCall(myshader.use());
-     glBindVertexArray(VAO);
+    GLCall(mycubeshader.use());
+     glBindVertexArray(cubeVAO);
     float time =glfwGetTime();
     float a_val=(sin(time)/2)+0.5f;
-   myshader.setFloat("a",a_val);
+   mycubeshader.setFloat("a",a_val);
 
    glm::mat4 view =glm::mat4(1.0f);
   view = glm::lookAt(cameraPos,cameraFront+cameraPos,cameraUp);
-
-
-unsigned int viewLoc=glGetUniformLocation(myshader.ID,"view");
-
+glBindVertexArray(cubeVAO);
+mycubeshader.use();
+unsigned int viewLoc=glGetUniformLocation(mycubeshader.ID,"view");
 glUniformMatrix4fv(viewLoc,1,GL_FALSE,glm::value_ptr(view));
+glDrawArrays(GL_TRIANGLES,0,36);
+lightingshader.use();
+unsigned int viewLoc1=glGetUniformLocation(lightingshader.ID,"view");
+glUniformMatrix4fv(viewLoc1,1,GL_FALSE,glm::value_ptr(view));
+glDrawArrays(GL_TRIANGLES,0,36);
 
-glBindVertexArray(VAO);
 
-for(unsigned int i=0;i<10;i++)
-{
-   glm::mat4 model =glm::mat4(1.0f);
-   model=glm::translate(model,cubePositions[i]);
-   model=glm::rotate(model,glm::radians(0.0f),glm::vec3(1.0f,0.3f,0.5f));
-   unsigned int modelLoc = glGetUniformLocation(myshader.ID,"model");
-   glUniformMatrix4fv(modelLoc,1,GL_FALSE,&model[0][0]);
-   glDrawArrays(GL_TRIANGLES,0,36);
 
-};
      //glBindVertexArray(0);
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved
     // etc.)
@@ -296,9 +323,17 @@ for(unsigned int i=0;i<10;i++)
 
   // glfw: terminate, clearing all previously allocated GLFW resources.
   // ------------------------------------------------------------------
-  glDeleteVertexArrays(1,&VAO);
-  glDeleteBuffers(1,&VBO);
-  glDeleteBuffers(1,&EBO);
+  glDeleteVertexArrays(1,&cubeVAO);
+  glDeleteBuffers(1,&cubeVBO);
+  glDeleteBuffers(1,&cubeEBO);
+
+ 
+  glDeleteVertexArrays(1,&lampVAO);
+  glDeleteBuffers(1,&lampVBO);
+ 
+
+
+  
 //  glDeleteProgram(ShaderProgram);
   glfwTerminate();
   return 0;
