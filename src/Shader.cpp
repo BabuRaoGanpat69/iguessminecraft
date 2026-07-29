@@ -1,4 +1,5 @@
 #include "Shader.hpp"
+
 Shader::Shader(const char* vertexPath,const char* fragmentPath)
 {
 
@@ -41,7 +42,7 @@ char infolog[512];
        if(!success)
        {
            glGetShaderInfoLog(vertex,512,NULL,infolog);
-           std::cout<<"VERT COMPILATION ERROR\n"<<std::endl;
+           std::cout<<"VERT COMPILATION ERROR\n"<<infolog<<std::endl;
        }
 
        //fragmeant 
@@ -66,6 +67,7 @@ char infolog[512];
        glDeleteShader(fragment);
 }
 Shader::~Shader(){
+    if(ID!=0)
     glDeleteProgram(ID);
 };
 void Shader::use(){
@@ -82,7 +84,16 @@ void Shader::setInt(const std::string &name,int value) const
 {
    GLCall( glUniform1f(glGetUniformLocation(ID,name.c_str()),value));
 }
-void Shader::set4f(const std::string &name,vec4f value)
+void Shader::set4f(const std::string &name,vec4f value) const
 {
    GLCall( glUniform4f(glGetUniformLocation(ID,name.c_str()),value.x,value.y,value.z,value.w));
 }
+void Shader::setvec3(const std::string &name,glm::vec3 value) const
+{
+   GLCall(glUniform3fv(glGetUniformLocation(ID, name.c_str()), 1, glm::value_ptr(value))); 
+}
+void Shader::setmat4(const std::string &name,glm::mat4 value) const
+{
+   GLCall( glUniformMatrix4fv(glGetUniformLocation(ID,name.c_str()),1,GL_FALSE,glm::value_ptr(value)));
+}
+
