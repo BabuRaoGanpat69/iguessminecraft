@@ -84,7 +84,8 @@ int main() {
   glEnable(GL_DEPTH_TEST);
   ///////texturecode/////
 
-  Shader lightingshader("../shader/colors.vs", "../shader/colors.fs");
+  Shader lightingshader("../shader/combinedlight.vs",
+                        "../shader/combinedlight.fs");
   Shader lightCubeShader("../shader/light_cube.vs", "../shader/light_cube.fs");
   std::cout << "shaders wrod " << std::endl;
   float vertices[] = {
@@ -126,6 +127,9 @@ int main() {
       -0.5f, 0.5f,  -0.5f, 0.0f,  1.0f,  0.0f,  0.0f,  1.0f};
   // unsigned int indices[]={0,1,3,1,2,3};
 
+  glm::vec3 pointLightPositions[] = {
+      glm::vec3(0.7f, 0.2f, 2.0f), glm::vec3(2.3f, -3.3f, -4.0f),
+      glm::vec3(-4.0f, 2.0f, -12.0f), glm::vec3(0.0f, 0.0f, -3.0f)};
   unsigned int cubeVAO, cubeVBO;
   GLCall(glGenVertexArrays(1, &cubeVAO));
   GLCall(glGenBuffers(1, &cubeVBO));
@@ -184,9 +188,7 @@ int main() {
                         GL_UNSIGNED_BYTE, data1));
     GLCall(glGenerateMipmap(GL_TEXTURE_2D));
   } else {
-    {
-      std::cout << "failed to load texture" << std::endl;
-    }
+    std::cout << "failed to load texture" << std::endl;
   }
 
   stbi_image_free(data1);
@@ -231,75 +233,149 @@ int main() {
 
   while (!glfwWindowShouldClose(window)) {
 
+    // per-frame time logic
+    // --------------------
     float currentFrame = static_cast<float>(glfwGetTime());
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
+
     // input
     // -----
     processInput(window);
 
     // render
     // ------
-    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    GLCall(glActiveTexture(GL_TEXTURE0));
-    GLCall(glBindTexture(GL_TEXTURE_2D, diffuseMap));
-    GLCall(glActiveTexture(GL_TEXTURE1));
-    GLCall(glBindTexture(GL_TEXTURE_2D, specularMap));
-
+    // be sure to activate shader when setting uniforms/drawing objects
     lightingshader.use();
-    lightingshader.setvec3("light.position", lightPos);
     lightingshader.setvec3("viewPos", camera.Position);
-    // light properties
-    lightingshader.setvec3("light.ambient", glm::vec3{0.2f, 0.2f, 0.2f});
-    lightingshader.setvec3("light.diffuse", glm::vec3{0.7f, 0.7f, 0.7f});
-    lightingshader.setvec3("light.specular", glm::vec3{1.0f, 1.0f, 1.0f});
+    lightingshader.setFloat("material.shininess", 32.0f);
 
-    lightingshader.setFloat("light.constant", 1.0f);
-    lightingshader.setFloat("light.linear", 0.09f);
-    lightingshader.setFloat("light.quadratic", 0.032f);
+    /*
+       Here we set all the uniforms for the 5/6 types of lights we have. We
+       have to set them manually and index the proper PointLight struct in the
+       array to set each uniform variable. This can be done more code-friendly
+       by defining light types as classes and set their values in there, or by
+       using a more efficient uniform approach by using 'Uniform buffer
+       objects', but that is something we'll discuss in the 'Advanced GLSL'
+       tutorial.
+    */
+    // directional light
+    lightingshader.setvec3("dirLight.direction",
+                           glm::vec3{-0.2f, -1.0f, -0.3f});
+    lightingshader.setvec3("dirLight.ambient", glm::vec3{0.05f, 0.05f, 0.05f});
+    lightingshader.setvec3("dirLight.diffuse", glm::vec3{0.4f, 0.4f, 0.4f});
+    lightingshader.setvec3("dirLight.specular", glm::vec3{0.5f, 0.5f, 0.5f});
+    // point light 1
+    lightingshader.setvec3("pointLights[0].position", pointLightPositions[0]);
+    lightingshader.setvec3("pointLights[0].ambient",
+                           glm::vec3{0.05f, 0.05f, 0.05f});
+    lightingshader.setvec3("pointLights[0].diffuse",
+                           glm::vec3{0.8f, 0.8f, 0.8f});
+    lightingshader.setvec3("pointLights[0].specular",
+                           glm::vec3{1.0f, 1.0f, 1.0f});
+    lightingshader.setFloat("pointLights[0].constant", 1.0f);
+    lightingshader.setFloat("pointLights[0].linear", 0.09f);
+    lightingshader.setFloat("pointLights[0].quadratic", 0.032f);
+    // point light 2
+    lightingshader.setvec3("pointLights[1].position", pointLightPositions[1]);
+    lightingshader.setvec3("pointLights[1].ambient",
+                           glm::vec3{0.05f, 0.05f, 0.05f});
+    lightingshader.setvec3("pointLights[1].diffuse",
+                           glm::vec3{0.8f, 0.8f, 0.8f});
+    lightingshader.setvec3("pointLights[1].specular",
+                           glm::vec3{1.0f, 1.0f, 1.0f});
+    lightingshader.setFloat("pointLights[1].constant", 1.0f);
+    lightingshader.setFloat("pointLights[1].linear", 0.09f);
+    lightingshader.setFloat("pointLights[1].quadratic", 0.032f);
+    // point light 3
+    lightingshader.setvec3("pointLights[2].position", pointLightPositions[2]);
+    lightingshader.setvec3("pointLights[2].ambient",
+                           glm::vec3{0.05f, 0.05f, 0.05f});
+    lightingshader.setvec3("pointLights[2].diffuse",
+                           glm::vec3{0.8f, 0.8f, 0.8f});
+    lightingshader.setvec3("pointLights[2].specular",
+                           glm::vec3{1.0f, 1.0f, 1.0f});
+    lightingshader.setFloat("pointLights[2].constant", 1.0f);
+    lightingshader.setFloat("pointLights[2].linear", 0.09f);
+    lightingshader.setFloat("pointLights[2].quadratic", 0.032f);
+    // point light 4
+    lightingshader.setvec3("pointLights[3].position", pointLightPositions[3]);
+    lightingshader.setvec3("pointLights[3].ambient",
+                           glm::vec3{0.05f, 0.05f, 0.05f});
+    lightingshader.setvec3("pointLights[3].diffuse",
+                           glm::vec3{0.8f, 0.8f, 0.8f});
+    lightingshader.setvec3("pointLights[3].specular",
+                           glm::vec3{1.0f, 1.0f, 1.0f});
+    lightingshader.setFloat("pointLights[3].constant", 1.0f);
+    lightingshader.setFloat("pointLights[3].linear", 0.09f);
+    lightingshader.setFloat("pointLights[3].quadratic", 0.032f);
+    // spotLight
+    lightingshader.setvec3("spotLight.position", camera.Position);
+    lightingshader.setvec3("spotLight.direction", camera.Front);
+    lightingshader.setvec3("spotLight.ambient", glm::vec3{0.0f, 0.0f, 0.0f});
+    lightingshader.setvec3("spotLight.diffuse", glm::vec3{1.0f, 1.0f, 1.0f});
+    lightingshader.setvec3("spotLight.specular", glm::vec3{1.0f, 1.0f, 1.0f});
+    lightingshader.setFloat("spotLight.constant", 1.0f);
+    lightingshader.setFloat("spotLight.linear", 0.09f);
+    lightingshader.setFloat("spotLight.quadratic", 0.032f);
+    lightingshader.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
+    lightingshader.setFloat("spotLight.outerCutOff",
+                            glm::cos(glm::radians(15.0f)));
 
-    lightingshader.setFloat("material.shininess", 64.0f);
-
-    GLCall(glm::mat4 projection = glm::perspective(
-               glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT,
-               0.1f, 100.0f));
-    GLCall(glm::mat4 view = camera.GetViewMatrix());
+    // view/projection transformations
+    glm::mat4 projection =
+        glm::perspective(glm::radians(camera.Zoom),
+                         (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+    glm::mat4 view = camera.GetViewMatrix();
     lightingshader.setmat4("projection", projection);
     lightingshader.setmat4("view", view);
 
     // world transformation
+    glm::mat4 model = glm::mat4(1.0f);
+    lightingshader.setmat4("model", model);
 
-    aval = static_cast<float>(glfwGetTime());
-    std::cout << aval << std::endl;
-    aval = sin(aval);
-    GLCall(glBindVertexArray(cubeVAO));
-    for (unsigned int i{}; i < 10; i++) {
+    // bind diffuse map
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, diffuseMap);
+    // bind specular map
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, specularMap);
+
+    // render containers
+    glBindVertexArray(cubeVAO);
+    for (unsigned int i = 0; i < 10; i++) {
+      // calculate the model matrix for each object and pass it to shader
+      // before drawing
       glm::mat4 model = glm::mat4(1.0f);
       model = glm::translate(model, cubePositions[i]);
-     // model = glm::rotate(model, sin(360.0f * glm::radians(aval)),
-       ///                   glm::vec3{1.0f, 0.0f, 0.0f});
+      float angle = 20.0f * i;
+      model =
+          glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
       lightingshader.setmat4("model", model);
-      GLCall(glDrawArrays(GL_TRIANGLES, 0, 36));
-    }
-    // render the cube
 
+      glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
+
+    // also draw the lamp object(s)
     lightCubeShader.use();
     lightCubeShader.setmat4("projection", projection);
     lightCubeShader.setmat4("view", view);
-    glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, lightPos);
-    model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
-    lightCubeShader.setmat4("model", model);
 
-    GLCall(glBindVertexArray(lightCubeVAO));
-    GLCall(glDrawArrays(GL_TRIANGLES, 0, 36));
+    // we now draw as many light bulbs as we have point lights.
+    glBindVertexArray(lightCubeVAO);
+    for (unsigned int i = 0; i < 4; i++) {
+      model = glm::mat4(1.0f);
+      model = glm::translate(model, pointLightPositions[i]);
+      model = glm::scale(model, glm::vec3(0.2f)); // Make it a smaller cube
+      lightCubeShader.setmat4("model", model);
+      glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
 
-    // glBindVertexArray(0);
-    //  glfw: swap buffers and poll IO events (keys pressed/released, mouse
-    //  moved
-    // etc.)
+    // glfw: swap buffers and poll IO events (keys pressed/released, mouse
+    // moved etc.)
     // -------------------------------------------------------------------------------
     glfwSwapBuffers(window);
     glfwPollEvents();
@@ -317,8 +393,8 @@ int main() {
   return 0;
 }
 
-// process all input: query GLFW whether relevant keys are pressed/released this
-// frame and react accordingly
+// process all input: query GLFW whether relevant keys are pressed/released
+// this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
 void processInput(GLFWwindow *window) {
   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -339,7 +415,8 @@ void processInput(GLFWwindow *window) {
 // ---------------------------------------------------------------------------------------------
 void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
   // make sure the viewport matches the new window dimensions; note that width
-  // and height will be significantly larger than specified on retina displays.
+  // and height will be significantly larger than specified on retina
+  // displays.
   glViewport(0, 0, width, height);
 }
 
